@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pemindai QR - Absensi Digital</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;padding:22px;font-family:Arial,sans-serif;background:#f3f6fb;color:#193451}
+    .card{max-width:620px;margin:20px auto;background:#fff;padding:22px;border-radius:14px;box-shadow:0 3px 14px #172f5010;text-align:center}
+    h2{margin-top:4px}
+    #reader{width:100%;max-width:480px;margin:18px auto}
+    button,select{padding:12px 16px;border:0;border-radius:8px;font-size:15px}
+    button{background:#2465b5;color:white;cursor:pointer}
+    button:disabled{opacity:.55;cursor:not-allowed}
+    .stop{background:#dc665d}
+    #message{padding:12px;border-radius:9px;background:#eef4fb;margin-top:14px;white-space:pre-wrap}
+    .hint{color:#66788c;font-size:14px;line-height:1.5}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>📷 Pemindai QR Code Siswa</h2>
+    <p class="hint">Izinkan akses kamera ketika browser memintanya. Setelah QR terbaca, NIS akan dikirim ke aplikasi Absensi Digital.</p>
+    <p>
+      <label for="cameraMode">Kamera: </label>
+      <select id="cameraMode">
+        <option value="user">Kamera depan / laptop</option>
+        <option value="environment">Kamera belakang HP</option>
+      </select>
+    </p>
+    <div id="reader"></div>
+    <button id="startBtn">Mulai Kamera</button>
+    <button id="stopBtn" class="stop" disabled>Hentikan</button>
+    <div id="message">Siap. Tekan Mulai Kamera.</div>
+  </div>
+
+<script>
+(function(){
+  const params = new URLSearchParams(location.search);
+  const session = params.get('session') || '';
+  const requestedFacing = params.get('facing') || 'user';
+  const cameraMode = document.getElementById('cameraMode');
+  const message = document.getElementById('message');
+  const startBtn = document.getElementById('startBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  let qr = null;
+  let running = false;
+  let sent = false;
+
+  cameraMode.value = requestedFacing === 'environment' ? 'environment' : 'user';
+
+  function show(text){ message.textContent = text; }
+
+  async function stopCamera(){
+    if(qr && running){
+      try { await qr.stop(); } catch(e) { console.warn(e); }
+    }
+    running = false;
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+  }
+
+  startBtn.addEventListener('click', async function(){
+    if(running || sent) return;
+    if(!session){
+      show('Sesi tidak ditemukan. Tutup tab ini dan buka pemindai dari aplikasi absensi.');
+      return;
+    }
+    if(typeof Html5Qrcode === 'undefined'){
+      show('Library pemindai gagal dimuat. Periksa koneksi internet lalu muat ulang halaman.');
+      return;
+    }
+
+    startBtn.disabled = true;
+    show('Meminta izin kamera...');
+    try{
+      if(!qr) qr = new Html5Qrcode('reader');
+      await qr.start(
+        { facingMode: cameraMode.value },
+        { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+        async function(decodedText){
+          if(sent) return;
+          sent = true;
+          show('QR terbaca. Mengirim NIS ke aplikasi absensi...');
+          await stopCamera();
+
+          if(!window.opener){
+            show('Aplikasi absensi asal tidak ditemukan. Tutup tab ini dan mulai scan dari aplikasi absensi.');
+            sent = false;
+            return;
+          }
+
+          window.opener.postMessage({
+            type: 'ABSENSI_QR_RESULT',
+            session: session,
+            text: String(decodedText).trim()
+          }, '*');
+
+          show('QR berhasil dikirim. Tab ini dapat ditutup.');
+          setTimeout(function(){ try{ window.close(); }catch(e){} }, 900);
+        },
+        function(){ /* abaikan pesan per frame */ }
+      );
+      running = true;
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+      show('Kamera aktif. Arahkan QR Code kartu siswa ke kamera.');
+    }catch(err){
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      show('Kamera tidak dapat dibuka: ' + (err && err.name ? err.name + ': ' : '') + (err && err.message ? err.message : String(err)) +
+        '\nPastikan izin kamera untuk github.io diizinkan dan halaman menggunakan HTTPS.');
+    }
+  });
+
+  stopBtn.addEventListener('click', async function(){
+    await stopCamera();
+    show('Kamera dihentikan.');
+  });
+
+  cameraMode.addEventListener('change', async function(){
+    if(running){
+      await stopCamera();
+      show('Pilihan kamera berubah. Tekan Mulai Kamera.');
+    }
+  });
+
+  window.addEventListener('message', async function(event){
+    if(event.data && event.data.type === 'ABSENSI_STOP' && event.data.session === session){
+      await stopCamera();
+      show('Pemindaian dihentikan dari aplikasi absensi.');
+    }
+  });
+
+  if(!session) show('Buka pemindai ini melalui tombol Mulai Scan pada aplikasi absensi.');
+})();
+</script>
+</body>
+</html>
