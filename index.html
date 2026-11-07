@@ -1,141 +1,700 @@
+
 <!DOCTYPE html>
-<html lang="id">
+<html>
 <head>
-  <meta charset="UTF-8">
+  <base target="_top">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Pemindai QR - Absensi Digital</title>
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <style>
-    *{box-sizing:border-box}
-    body{margin:0;padding:22px;font-family:Arial,sans-serif;background:#f3f6fb;color:#193451}
-    .card{max-width:620px;margin:20px auto;background:#fff;padding:22px;border-radius:14px;box-shadow:0 3px 14px #172f5010;text-align:center}
-    h2{margin-top:4px}
-    #reader{width:100%;max-width:480px;margin:18px auto}
-    button,select{padding:12px 16px;border:0;border-radius:8px;font-size:15px}
-    button{background:#2465b5;color:white;cursor:pointer}
-    button:disabled{opacity:.55;cursor:not-allowed}
-    .stop{background:#dc665d}
-    #message{padding:12px;border-radius:9px;background:#eef4fb;margin-top:14px;white-space:pre-wrap}
-    .hint{color:#66788c;font-size:14px;line-height:1.5}
+<style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f3f6fb;
+      color: #193451;
+    }
+
+    .sidebar {
+      position: fixed;
+      width: 245px;
+      height: 100vh;
+      background: #123b70;
+      color: white;
+      padding: 25px 15px;
+    }
+
+    .brand {
+      font-size: 19px;
+      font-weight: bold;
+      margin: 10px;
+      line-height: 1.5;
+    }
+
+    .menu {
+      display: block;
+      padding: 14px;
+      margin-top: 12px;
+      border-radius: 9px;
+      color: white;
+      cursor: pointer;
+      background: transparent;
+      border: none;
+      text-align: left;
+      width: 100%;
+      font-size: 15px;
+    }
+
+    .menu:hover, .menu.active {
+      background: #28568d;
+    }
+
+    main {
+      margin-left: 245px;
+      padding: 30px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 15px;
+      flex-wrap: wrap;
+      margin-bottom: 25px;
+    }
+
+    h1 { font-size: 25px; }
+    .muted { color: #7b8a9c; }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 17px;
+    }
+
+    .card {
+      background: white;
+      padding: 22px;
+      border-radius: 14px;
+      box-shadow: 0 3px 14px #172f5010;
+    }
+
+    .card h2 {
+      font-size: 32px;
+      margin: 12px 0 5px;
+    }
+
+    .green { color: #159b69; }
+    .yellow { color: #d99a25; }
+    .red { color: #dc665d; }
+    .blue { color: #3478ce; }
+
+    .panel {
+      background: white;
+      border-radius: 14px;
+      padding: 22px;
+      margin-top: 22px;
+      box-shadow: 0 3px 14px #172f5010;
+    }
+
+    .progress {
+      height: 13px;
+      border-radius: 20px;
+      background: #e7edf4;
+      overflow: hidden;
+      margin: 15px 0;
+    }
+
+    .progress div {
+      height: 100%;
+      background: #159b69;
+    }
+
+    .page { display: none; }
+    .page.active { display: block; }
+
+    #reader {
+      max-width: 450px;
+      margin: 20px auto;
+    }
+
+    .scan-wrap {
+      max-width: 600px;
+      margin: auto;
+      text-align: center;
+    }
+
+    button, select {
+      padding: 12px 18px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .primary {
+      background: #2465b5;
+      color: white;
+    }
+
+    .stop {
+      background: #dc665d;
+      color: white;
+    }
+
+    select {
+      background: #f0f4f8;
+      border: 1px solid #d9e1eb;
+    }
+
+    .result {
+      background: #e8f7ef;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 15px;
+    }
+
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 600px;
+      margin-top: 15px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 13px;
+      border-bottom: 1px solid #edf0f4;
+      font-size: 14px;
+    }
+
+    th { background: #f5f8fc; }
+
+    .status {
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      background: #e5f5ec;
+      color: #16834e;
+    }
+
+    .hidden { display: none !important; }
+
+    @media(max-width:900px) {
+      .cards { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media(max-width:650px) {
+      .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        padding: 10px;
+      }
+
+      .brand { margin: 8px; }
+
+      .menu {
+        display: inline-block;
+        width: auto;
+        margin: 3px;
+        padding: 10px;
+        font-size: 13px;
+      }
+
+      main {
+        margin: 0;
+        padding: 17px;
+      }
+
+      .cards { grid-template-columns: repeat(2, 1fr); }
+      .card { padding: 15px; }
+      .card h2 { font-size: 25px; }
+      h1 { font-size: 22px; }
+    }
   </style>
 </head>
+
 <body>
-  <div class="card">
-    <h2>📷 Pemindai QR Code Siswa</h2>
-    <p class="hint">Izinkan akses kamera ketika browser memintanya. Setelah QR terbaca, NIS akan dikirim ke aplikasi Absensi Digital.</p>
-    <p>
-      <label for="cameraMode">Kamera: </label>
-      <select id="cameraMode">
-        <option value="user">Kamera depan / laptop</option>
-        <option value="environment">Kamera belakang HP</option>
-      </select>
-    </p>
-    <div id="reader"></div>
-    <button id="startBtn">Mulai Kamera</button>
-    <button id="stopBtn" class="stop" disabled>Hentikan</button>
-    <div id="message">Siap. Tekan Mulai Kamera.</div>
+
+<aside class="sidebar">
+  <div class="brand">🎓 ABSENSI DIGITAL<br>
+    <small>SD NEGERI KUBANG APU</small>
   </div>
 
+  <button class="menu active" data-page="dashboard">
+    🏠 Dashboard
+  </button>
+
+  <button class="menu" data-page="scanner">
+    📷 Scan QR Code
+  </button>
+
+  <button class="menu" data-page="data">
+    📋 Data Absensi
+  </button>
+</aside>
+
+<main>
+
+  <section id="dashboard" class="page active">
+    <div class="header">
+      <div>
+        <h1>Dashboard</h1>
+        <p class="muted">Sistem Absensi Digital Siswa</p>
+      </div>
+      <button class="primary" id="refreshDashboard">
+        ↻ Refresh Data
+      </button>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        👨‍🎓 <p>Total Siswa</p>
+        <h2 id="total">0</h2>
+      </div>
+
+      <div class="card">
+        🟢 <p>Hadir</p>
+        <h2 class="green" id="hadir">0</h2>
+      </div>
+
+      <div class="card">
+        🟡 <p>Izin</p>
+        <h2 class="yellow" id="izin">0</h2>
+      </div>
+
+      <div class="card">
+        🟠 <p>Sakit</p>
+        <h2 class="red" id="sakit">0</h2>
+      </div>
+
+      <div class="card">
+        🔴 <p>Alpa</p>
+        <h2 class="red" id="alpa">0</h2>
+      </div>
+
+      <div class="card">
+        📊 <p>Persentase Hadir</p>
+        <h2 class="blue" id="persen">0%</h2>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Statistik Kehadiran Hari Ini</h3>
+      <div class="progress">
+        <div id="bar" style="width:0%"></div>
+      </div>
+      <p id="statistik" class="muted">Memuat data...</p>
+    </div>
+  </section>
+
+  
+<section id="scanner" class="page">
+  <div class="header">
+    <div>
+      <h1>Pemindai QR Code</h1>
+      <p class="muted">Klik Mulai Scan. Kamera akan dibuka pada tab pemindai terpisah.</p>
+    </div>
+  </div>
+
+  <div class="panel scan-wrap">
+    <h3>📷 Kamera Pemindai</h3>
+
+    <label for="status">Status Absensi</label>
+    <br><br>
+
+    <select id="status">
+      <option value="Hadir">Hadir</option>
+      <option value="Izin">Izin</option>
+      <option value="Sakit">Sakit</option>
+    </select>
+
+    <br><br>
+
+    <label for="cameraSelect">Pilih Kamera</label>
+    <br><br>
+
+    <select id="cameraSelect"
+      style="width:100%;max-width:350px;margin-bottom:15px">
+      <option value="user">Kamera Laptop / Depan</option>
+      <option value="environment">Kamera Belakang HP</option>
+    </select>
+
+    <div id="reader"></div>
+
+    <br>
+
+    <button
+      type="button"
+      class="primary"
+      id="startButton"
+      >
+      📷 Mulai Scan
+    </button>
+
+    <button
+      type="button"
+      class="stop"
+      id="stopButton">
+      Hentikan
+    </button>
+
+    <div id="scanResult"></div>
+  </div>
+</section>
+
+
+  <section id="data" class="page">
+    <div class="header">
+      <div>
+        <h1>Data Absensi</h1>
+        <p class="muted">Riwayat kehadiran siswa</p>
+      </div>
+      <button class="primary" id="refreshAttendance">
+        ↻ Refresh
+      </button>
+    </div>
+
+    <div class="panel">
+      <input id="search"
+        placeholder="Cari nama, NIS, atau kelas..."
+        
+        style="padding:12px;width:100%;border:1px solid #ddd;border-radius:8px">
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Tanggal</th>
+              <th>Jam</th>
+              <th>NIS</th>
+              <th>Nama</th>
+              <th>Kelas</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="tableData"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</main>
+
 <script>
-(function(){
-  const params = new URLSearchParams(location.search);
-  const session = params.get('session') || '';
-  const requestedFacing = params.get('facing') || 'user';
-  const cameraMode = document.getElementById('cameraMode');
-  const message = document.getElementById('message');
-  const startBtn = document.getElementById('startBtn');
-  const stopBtn = document.getElementById('stopBtn');
-  let qr = null;
-  let running = false;
-  let sent = false;
+  
+  let attendanceData = [];
 
-  cameraMode.value = requestedFacing === 'environment' ? 'environment' : 'user';
+  function showPage(page, button) {
+    document.querySelectorAll('.page')
+      .forEach(p => p.classList.remove('active'));
 
-  function show(text){ message.textContent = text; }
+    document.getElementById(page).classList.add('active');
 
-  async function stopCamera(){
-    if(qr && running){
-      try { await qr.stop(); } catch(e) { console.warn(e); }
-    }
-    running = false;
-    startBtn.disabled = false;
-    stopBtn.disabled = true;
+    document.querySelectorAll('.menu')
+      .forEach(b => b.classList.remove('active'));
+
+    button.classList.add('active');
+
+    if(page === 'dashboard') loadDashboard();
+    if(page === 'data') loadAttendance();
+    if (page === 'scanner') loadCameras();
   }
 
-  startBtn.addEventListener('click', async function(){
-    if(running || sent) return;
-    if(!session){
-      show('Sesi tidak ditemukan. Tutup tab ini dan buka pemindai dari aplikasi absensi.');
-      return;
+  function loadDashboard() {
+    google.script.run
+      .withSuccessHandler(data => {
+        ['total','hadir','izin','sakit','alpa'].forEach(key => {
+          document.getElementById(key).textContent = data[key];
+        });
+
+        document.getElementById('persen').textContent =
+          data.persen + '%';
+
+        document.getElementById('bar').style.width =
+          data.persen + '%';
+
+        document.getElementById('statistik').textContent =
+          'Hadir ' + data.hadir +
+          ' | Izin ' + data.izin +
+          ' | Sakit ' + data.sakit +
+          ' | Alpa ' + data.alpa;
+      })
+      .withFailureHandler(showError)
+      .getDashboard();
+  }
+
+ 
+// Status pemindai
+let scanner = null;
+let isScanning = false;
+let isProcessingQr = false;
+
+// Memuat pilihan kamera tanpa meminta izin kamera terlebih dahulu
+function loadCameras() {
+  const select = document.getElementById('cameraSelect');
+  const result = document.getElementById('scanResult');
+
+  // Lindungi fungsi dari pemanggilan saat elemen belum tersedia.
+  if (!select || !result) {
+    console.warn('Elemen cameraSelect atau scanResult belum tersedia.');
+    return;
+  }
+
+  select.innerHTML = `
+    <option value="user">Kamera Laptop / Depan</option>
+    <option value="environment">Kamera Belakang HP</option>
+  `;
+
+  result.textContent = 'Pilih kamera, lalu tekan Mulai Scan. Pemindai terbuka di tab baru.';
+}
+
+// Menampilkan pesan kesalahan kamera
+function showCameraError(err) {
+  const result = document.getElementById('scanResult');
+  const name = err && err.name ? err.name : 'CameraError';
+  const msg = err && err.message ? err.message : String(err);
+
+  if (!result) {
+    console.error(name + ': ' + msg);
+    return;
+  }
+
+  result.innerHTML =
+    '<div class="result" style="background:#fff1f0;color:#9b2c2c;text-align:left">' +
+    '<b>Kamera belum bisa dibuka</b><br>' +
+    escapeHtml(name) + ': ' + escapeHtml(msg) +
+    '<br><br>Pastikan izin kamera browser aktif, gunakan HTTPS, dan tidak ada aplikasi lain yang memakai kamera.</div>';
+}
+
+// ===== Integrasi pemindai eksternal GitHub Pages =====
+// GANTI dua nilai ini setelah membuat repository GitHub Pages.
+const QR_SCANNER_URL = 'https://USERNAME.github.io/NAMA-REPOSITORY/';
+const QR_SCANNER_ORIGIN = 'https://USERNAME.github.io';
+
+let scannerWindow = null;
+let scannerSession = null;
+
+function loadCameras() {
+  const result = document.getElementById('scanResult');
+  if (result) {
+    result.textContent = 'Pilih kamera, lalu tekan Mulai Scan. Pemindai akan terbuka di tab baru.';
+  }
+}
+
+function showCameraError(err) {
+  const result = document.getElementById('scanResult');
+  const msg = err && err.message ? err.message : String(err);
+  if (result) {
+    result.innerHTML =
+      '<div class="result" style="background:#fff1f0;color:#9b2c2c;text-align:left">' +
+      '<b>Pemindai tidak dapat dibuka</b><br>' + escapeHtml(msg) +
+      '</div>';
+  }
+}
+
+function startScan() {
+  const result = document.getElementById('scanResult');
+  const cameraSelect = document.getElementById('cameraSelect');
+
+  if (!result || !cameraSelect) {
+    showCameraError(new Error('Elemen pemindai tidak ditemukan.'));
+    return;
+  }
+
+  if (QR_SCANNER_URL.includes('USERNAME') || QR_SCANNER_URL.includes('NAMA-REPOSITORY')) {
+    showCameraError(new Error('Alamat GitHub Pages belum diatur. Ganti QR_SCANNER_URL dan QR_SCANNER_ORIGIN di Index.html.'));
+    return;
+  }
+
+  if (scannerWindow && !scannerWindow.closed) {
+    scannerWindow.focus();
+    result.textContent = 'Tab pemindai sudah terbuka. Selesaikan pemindaian di tab tersebut.';
+    return;
+  }
+
+  scannerSession = (window.crypto && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : String(Date.now()) + '-' + Math.random().toString(36).slice(2);
+
+  const mode = cameraSelect.value || 'user';
+  const url = QR_SCANNER_URL +
+    '?session=' + encodeURIComponent(scannerSession) +
+    '&facing=' + encodeURIComponent(mode);
+
+  // Harus dipanggil langsung dari klik pengguna agar tidak diblokir popup blocker.
+  scannerWindow = window.open(url, '_blank');
+
+  if (!scannerWindow) {
+    showCameraError(new Error('Popup diblokir browser. Izinkan pop-up untuk aplikasi Google Apps Script, lalu klik Mulai Scan lagi.'));
+    return;
+  }
+
+  result.textContent = 'Pemindai dibuka di tab baru. Izinkan akses kamera pada tab tersebut.';
+}
+
+async function stopScan() {
+  if (scannerWindow && !scannerWindow.closed) {
+    try {
+      scannerWindow.postMessage({ type: 'ABSENSI_STOP', session: scannerSession }, QR_SCANNER_ORIGIN);
+      scannerWindow.close();
+    } catch (err) {
+      console.warn('Tidak dapat menutup tab pemindai:', err);
     }
-    if(typeof Html5Qrcode === 'undefined'){
-      show('Library pemindai gagal dimuat. Periksa koneksi internet lalu muat ulang halaman.');
-      return;
-    }
+  }
+  scannerWindow = null;
+  scannerSession = null;
 
-    startBtn.disabled = true;
-    show('Meminta izin kamera...');
-    try{
-      if(!qr) qr = new Html5Qrcode('reader');
-      await qr.start(
-        { facingMode: cameraMode.value },
-        { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
-        async function(decodedText){
-          if(sent) return;
-          sent = true;
-          show('QR terbaca. Mengirim NIS ke aplikasi absensi...');
-          await stopCamera();
+  const result = document.getElementById('scanResult');
+  if (result) result.textContent = 'Pemindaian dihentikan.';
+}
 
-          if(!window.opener){
-            show('Aplikasi absensi asal tidak ditemukan. Tutup tab ini dan mulai scan dari aplikasi absensi.');
-            sent = false;
-            return;
-          }
+// Pesan hanya diterima dari tab pemindai GitHub Pages yang dibuka aplikasi ini.
+window.addEventListener('message', function(event) {
+  if (event.origin !== QR_SCANNER_ORIGIN) return;
+  if (!scannerWindow || event.source !== scannerWindow) return;
 
-          window.opener.postMessage({
-            type: 'ABSENSI_QR_RESULT',
-            session: session,
-            text: String(decodedText).trim()
-          }, '*');
+  const data = event.data || {};
+  if (data.type !== 'ABSENSI_QR_RESULT' || data.session !== scannerSession) return;
 
-          show('QR berhasil dikirim. Tab ini dapat ditutup.');
-          setTimeout(function(){ try{ window.close(); }catch(e){} }, 900);
-        },
-        function(){ /* abaikan pesan per frame */ }
-      );
-      running = true;
-      startBtn.disabled = true;
-      stopBtn.disabled = false;
-      show('Kamera aktif. Arahkan QR Code kartu siswa ke kamera.');
-    }catch(err){
-      startBtn.disabled = false;
-      stopBtn.disabled = true;
-      show('Kamera tidak dapat dibuka: ' + (err && err.name ? err.name + ': ' : '') + (err && err.message ? err.message : String(err)) +
-        '\nPastikan izin kamera untuk github.io diizinkan dan halaman menggunakan HTTPS.');
-    }
+  const nis = String(data.text || '').trim();
+  if (!nis) {
+    showCameraError(new Error('QR Code tidak berisi NIS.'));
+    return;
+  }
+
+  const statusElement = document.getElementById('status');
+  const status = statusElement ? statusElement.value : 'Hadir';
+  const result = document.getElementById('scanResult');
+
+  if (result) result.textContent = 'QR terbaca. Menyimpan absensi...';
+
+  try { scannerWindow.close(); } catch (err) {}
+  scannerWindow = null;
+  scannerSession = null;
+
+  google.script.run
+    .withSuccessHandler(function(data) {
+      if (result) {
+        result.innerHTML =
+          '<div class="result">' +
+          '<h3>✓ Absensi Berhasil</h3>' +
+          '<b>' + escapeHtml(data.nama) + '</b><br>' +
+          'NIS: ' + escapeHtml(data.nis) + '<br>' +
+          'Kelas: ' + escapeHtml(data.kelas) + '<br>' +
+          'Status: ' + escapeHtml(data.status) + '<br>' +
+          'Jam: ' + escapeHtml(data.jam) +
+          '</div>';
+      }
+      loadDashboard();
+      loadAttendance();
+    })
+    .withFailureHandler(function(err) {
+      if (result) {
+        result.innerHTML =
+          '<div class="result" style="background:#fff1f0;color:#9b2c2c">' +
+          '<b>Absensi gagal</b><br>' +
+          escapeHtml(err && err.message ? err.message : String(err)) +
+          '</div>';
+      }
+    })
+    .scanStudent(nis, status);
+});
+
+function loadAttendance() {
+    google.script.run
+      .withSuccessHandler(data => {
+        attendanceData = data;
+        renderTable(data);
+      })
+      .withFailureHandler(showError)
+      .getAttendance();
+  }
+
+  function renderTable(data) {
+    const tbody = document.getElementById('tableData');
+    tbody.innerHTML = '';
+
+    data.forEach(r => {
+      const tr = document.createElement('tr');
+
+      [
+        r.tanggal, r.jam, r.nis,
+        r.nama, r.kelas, r.status
+      ].forEach(value => {
+        const td = document.createElement('td');
+        td.textContent = value;
+        tr.appendChild(td);
+      });
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  function filterData() {
+    const q = document.getElementById('search')
+      .value.toLowerCase();
+
+    renderTable(attendanceData.filter(r =>
+      [r.nis,r.nama,r.kelas,r.status,r.tanggal]
+      .some(v => String(v).toLowerCase().includes(q))
+    ));
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, c => ({
+      '&':'&amp;', '<':'&lt;', '>':'&gt;',
+      '"':'&quot;', "'":'&#39;'
+    })[c]);
+  }
+
+  function showError(err) {
+    alert(err.message || String(err));
+  }
+
+// Inisialisasi event menggunakan addEventListener agar tombol tetap berfungsi
+// tanpa bergantung pada inline onclick.
+function initializeApp() {
+  document.querySelectorAll('.menu[data-page]').forEach(function(button) {
+    button.addEventListener('click', function() {
+      showPage(button.getAttribute('data-page'), button);
+    });
   });
 
-  stopBtn.addEventListener('click', async function(){
-    await stopCamera();
-    show('Kamera dihentikan.');
-  });
+  const startButton = document.getElementById('startButton');
+  const stopButton = document.getElementById('stopButton');
+  const refreshDashboard = document.getElementById('refreshDashboard');
+  const refreshAttendance = document.getElementById('refreshAttendance');
+  const searchInput = document.getElementById('search');
 
-  cameraMode.addEventListener('change', async function(){
-    if(running){
-      await stopCamera();
-      show('Pilihan kamera berubah. Tekan Mulai Kamera.');
-    }
-  });
+  if (startButton) startButton.addEventListener('click', startScan);
+  if (stopButton) stopButton.addEventListener('click', stopScan);
+  if (refreshDashboard) refreshDashboard.addEventListener('click', loadDashboard);
+  if (refreshAttendance) refreshAttendance.addEventListener('click', loadAttendance);
+  if (searchInput) searchInput.addEventListener('input', filterData);
 
-  window.addEventListener('message', async function(event){
-    if(event.data && event.data.type === 'ABSENSI_STOP' && event.data.session === session){
-      await stopCamera();
-      show('Pemindaian dihentikan dari aplikasi absensi.');
-    }
-  });
+  // Fungsi dibuat global agar dapat diperiksa melalui Console browser.
+  window.showPage = showPage;
+  window.loadDashboard = loadDashboard;
+  window.loadCameras = loadCameras;
+  window.startScan = startScan;
+  window.stopScan = stopScan;
+  window.loadAttendance = loadAttendance;
+  window.filterData = filterData;
 
-  if(!session) show('Buka pemindai ini melalui tombol Mulai Scan pada aplikasi absensi.');
-})();
+  loadDashboard();
+  loadCameras();
+  console.log('Absensi Digital siap. Event tombol sudah dipasang.');
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeApp);
+} else {
+  initializeApp();
+}
 </script>
+
 </body>
 </html>
